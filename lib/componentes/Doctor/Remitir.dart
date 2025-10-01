@@ -82,14 +82,14 @@ class _RemitirPageState extends State<RemitirPage> {
             ? Map<String, dynamic>.from(decoded['data'])
             : <String, dynamic>{};
 
-        // Soporte para data.paciente o data.usuario (según cómo venga del back)
+        // Soporte para data.paciente o data.usuario (segn cmo venga del back)
         final rawPaciente = (data['paciente'] is Map)
             ? Map<String, dynamic>.from(data['paciente'])
             : (data['usuario'] is Map)
             ? Map<String, dynamic>.from(data['usuario'])
             : <String, dynamic>{};
 
-        // Normalización a nombres de la BD
+        // Normalizacin a nombres de la BD
         final nombre =
             rawPaciente['nombreUsuario'] ?? rawPaciente['nombre'] ?? '';
         final apellido =
@@ -264,7 +264,7 @@ class _RemitirPageState extends State<RemitirPage> {
                           const SizedBox(height: 14),
 
                           const Text(
-                            "Información Personal:",
+                            "Informacin Personal:",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
@@ -276,15 +276,15 @@ class _RemitirPageState extends State<RemitirPage> {
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
-                            "Edad: ${_pacienteUI['edad'] ?? 'N/A'} años",
+                            "Edad: ${_pacienteUI['edad'] ?? 'N/A'} aos",
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
-                            "Género: ${_pacienteUI['genero'] ?? 'N/A'}",
+                            "Gnero: ${_pacienteUI['genero'] ?? 'N/A'}",
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
-                            "Teléfono: ${_pacienteUI['telefono'] ?? 'N/A'}",
+                            "Telfono: ${_pacienteUI['telefono'] ?? 'N/A'}",
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
@@ -294,7 +294,7 @@ class _RemitirPageState extends State<RemitirPage> {
                           const SizedBox(height: 14),
 
                           const Text(
-                            "Datos Clínicos:",
+                            "Datos Clnicos:",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
@@ -302,7 +302,7 @@ class _RemitirPageState extends State<RemitirPage> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            "Historia Clínica No: ${_pacienteUI['idHistoriaClinica']}",
+                            "Historia Clnica No: ${_pacienteUI['idHistoriaClinica']}",
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
@@ -325,14 +325,14 @@ class _RemitirPageState extends State<RemitirPage> {
                           ),
                           const SizedBox(height: 8),
 
-                          // Descripción (diagnóstico / motivo)
+                          // Descripcin (diagnstico / motivo)
                           _boxedField(
                             child: TextField(
                               controller: _diagnosticoController,
                               maxLines: 3,
                               decoration: const InputDecoration(
                                 hintText:
-                                    "Descripción del examen / motivo de remision",
+                                    "Descripcin del examen / motivo de remision",
                                 border: InputBorder.none,
                               ),
                             ),
@@ -379,7 +379,7 @@ class _RemitirPageState extends State<RemitirPage> {
 
                           const SizedBox(height: 20),
 
-                          // Botón Guardar
+                          // Botn Guardar
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(

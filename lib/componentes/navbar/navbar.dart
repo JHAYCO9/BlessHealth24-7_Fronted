@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../Doctor/AgendaDoctor.dart';
 
 class CustomNavbar extends StatelessWidget {
   const CustomNavbar({super.key});
@@ -13,20 +15,32 @@ class CustomNavbar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-
               IconButton(
                 icon: const Icon(Icons.person, color: Colors.teal, size: 30),
-                onPressed: () {
-
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final idMedico = prefs.getString('idMedico');
+                  final cedula = prefs.getString('cedulaMedico');
+                  final hasDoctor =
+                      (idMedico != null && idMedico.isNotEmpty) &&
+                      (cedula != null && cedula.isNotEmpty);
+                  // Si ya hay sesión de médico, ir directo a Agenda
+                  // Si no, pedir login de médico
+                  // ignore: use_build_context_synchronously
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => hasDoctor
+                          ? AgendaDoctorPage()
+                          : const Placeholder(color: Colors.red),
+                    ),
+                  );
                 },
               ),
 
               Row(
                 children: [
-                  Image.asset(
-                    'assets/images/Logo2.png',
-                    height: 40,
-                  ),
+                  Image.asset('assets/images/Logo2.png', height: 40),
                   const SizedBox(width: 8),
                   const Text(
                     "BlessHealth24",
@@ -40,7 +54,11 @@ class CustomNavbar extends StatelessWidget {
               ),
               // Ícono de carrito
               IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.teal, size: 28),
+                icon: const Icon(
+                  Icons.shopping_cart,
+                  color: Colors.teal,
+                  size: 28,
+                ),
                 onPressed: () {
                   // Acción al presionar
                 },
@@ -48,7 +66,6 @@ class CustomNavbar extends StatelessWidget {
             ],
           ),
         ),
-
       ],
     );
   }

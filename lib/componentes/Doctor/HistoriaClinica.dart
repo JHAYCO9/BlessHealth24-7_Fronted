@@ -1,6 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
+import 'package:bless_health24/componentes/shared/info_row.dart';
+import 'package:bless_health24/componentes/shared/state_views.dart';
+
 import 'Archivos.dart';
 
 class HistoriaClinicaPage extends StatefulWidget {
@@ -20,6 +27,9 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
   String _nombrePaciente = '';
   Map<String, dynamic> _datosPaciente = {};
 
+  static const String _baseUrl =
+      'https://blesshealth24-7-backprocesosmedicos-1.onrender.com/api';
+
   List<dynamic> _extraerLista(dynamic source) {
     if (source is List) return source;
     if (source is Map && source['data'] is List) {
@@ -35,12 +45,13 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
   }
 
   // Buscar historia clínica por documento
+
   Future<void> _buscarHistoriaClinica() async {
     final documento = _documentoController.text.trim();
     if (documento.isEmpty) {
       setState(() {
         _error = true;
-        _mensajeError = 'Por favor ingrese un numero de documento';
+        _mensajeError = 'Ingresa un número de documento.';
       });
       return;
     }
@@ -48,70 +59,107 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
     setState(() {
       _cargando = true;
       _error = false;
+      _mensajeError = '';
       _historiaClinica = null;
       _mostrarArchivos = false;
     });
 
     try {
-      final response = await http.get(
-        Uri.parse(
-          "https://blesshealth24-7-backprocesosmedicos-1.onrender.com/api/historias-clinicas/documento/$documento",
-        ),
-      );
+      final response = await http
+          .get(Uri.parse('$_baseUrl/historias-clinicas/documento/$documento'))
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final lista = _extraerLista(decoded);
-        if (lista.isNotEmpty) {
-          final historia = Map<String, dynamic>.from(
-            lista.first as Map<dynamic, dynamic>,
-          );
-          final paciente = Map<String, dynamic>.from(
-            (historia['paciente'] as Map<dynamic, dynamic>? ?? {}),
-          );
-          final registros = _extraerLista(historia['registrosConsultas'])
-              .map<Map<String, dynamic>>(
-                (registro) => Map<String, dynamic>.from(
-                  registro as Map<dynamic, dynamic>,
-                ),
-              )
-              .toList();
-          historia['registrosConsultas'] = registros;
-          setState(() {
-            _historiaClinica = historia;
-            _nombrePaciente =
-                "${paciente['nombreUsuario'] ?? ''} ${paciente['apellidoUsuario'] ?? ''}"
-                    .trim();
-            _datosPaciente = {
-              'idPaciente': paciente['idUsuario'],
-              'cedula': paciente['numeroDocumento'],
-              'nombres': paciente['nombreUsuario'],
-              'apellidos': paciente['apellidoUsuario'],
-            };
-          });
-        } else {
-          setState(() {
-            _error = true;
-            _mensajeError =
-                'No se encontró historia clínica para este documento';
-          });
-        }
-      } else {
+      if (!mounted) return;
+
+      if (response.statusCode == 404) {
         setState(() {
           _error = true;
           _mensajeError =
-              'Error al buscar historia clínica: ${response.statusCode}';
+              'No encontramos historia clínica para el documento $documento.';
         });
+        return;
       }
-    } catch (e) {
+      if (response.statusCode >= 400) {
+        throw HttpException(
+          'Error ${response.statusCode} al buscar la historia clínica.',
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      final lista = _extraerLista(decoded);
+      if (lista.isEmpty) {
+        setState(() {
+          _error = true;
+          _mensajeError =
+              'No encontramos historia clínica para el documento $documento.';
+        });
+        return;
+      }
+
+      final historia = Map<String, dynamic>.from(
+        lista.first as Map<dynamic, dynamic>,
+      );
+      final paciente = Map<String, dynamic>.from(
+        (historia['paciente'] as Map<dynamic, dynamic>? ?? {}),
+      );
+      final registros = _extraerLista(historia['registrosConsultas'])
+          .map<Map<String, dynamic>>(
+            (registro) =>
+                Map<String, dynamic>.from(registro as Map<dynamic, dynamic>),
+          )
+          .toList();
+      historia['registrosConsultas'] = registros;
+
+      setState(() {
+        _historiaClinica = historia;
+        _nombrePaciente =
+            "${paciente['nombreUsuario'] ?? ''} ${paciente['apellidoUsuario'] ?? ''}"
+                .trim();
+        _datosPaciente = {
+          'idPaciente': paciente['idUsuario'],
+          'cedula': paciente['numeroDocumento'],
+          'nombres': paciente['nombreUsuario'],
+          'apellidos': paciente['apellidoUsuario'],
+        };
+      });
+    } on TimeoutException {
+      if (!mounted) return;
       setState(() {
         _error = true;
-        _mensajeError = 'Error de conexión: $e';
+        _mensajeError =
+            'La solicitud tardó demasiado. Inténtalo nuevamente en unos segundos.';
+      });
+    } on SocketException {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _mensajeError =
+            'No fue posible conectarse al servidor. Revisa tu conexión.';
+      });
+    } on HttpException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _mensajeError = error.message;
+      });
+    } on FormatException {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _mensajeError = 'La respuesta del servidor es inválida.';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _mensajeError = 'Ocurrió un error inesperado: $error';
       });
     } finally {
-      setState(() {
-        _cargando = false;
-      });
+      if (mounted) {
+        setState(() {
+          _cargando = false;
+        });
+      }
     }
   }
 
@@ -219,25 +267,9 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
 
                 if (_error) ...[
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _mensajeError,
-                            style: TextStyle(color: Colors.red.shade800),
-                          ),
-                        ),
-                      ],
-                    ),
+                  ErrorView(
+                    message: _mensajeError,
+                    onRetry: _buscarHistoriaClinica,
                   ),
                 ],
 
@@ -272,14 +304,30 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
                             ],
                           ),
                           const Divider(),
-                          _buildInfoRow("Nombre", _nombrePaciente),
-                          _buildInfoRow(
-                            "Documento",
-                            _historiaClinica!['paciente']['numeroDocumento'],
+                          InfoRow(
+                            label: 'Nombre',
+                            value: _nombrePaciente,
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
-                          _buildInfoRow(
-                            "Fecha de creación",
-                            _historiaClinica!['fechaCreacion'],
+                          InfoRow(
+                            label: 'Documento',
+                            value:
+                                _historiaClinica!['paciente']['numeroDocumento'],
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
+                          ),
+                          InfoRow(
+                            label: 'Fecha de creación',
+                            value: _historiaClinica!['fechaCreacion'],
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -290,22 +338,42 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          _buildInfoRow(
-                            "Tipo de Sangre",
-                            _historiaClinica!['tipoSangre'] ?? 'No registrado',
+                          InfoRow(
+                            label: 'Tipo de Sangre',
+                            value:
+                                _historiaClinica!['tipoSangre'] ??
+                                'No registrado',
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
-                          _buildInfoRow(
-                            "Alergias",
-                            _historiaClinica!['alergias'] ?? 'Ninguna',
+                          InfoRow(
+                            label: 'Alergias',
+                            value: _historiaClinica!['alergias'] ?? 'Ninguna',
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
-                          _buildInfoRow(
-                            "Enfermedades Crónicas",
-                            _historiaClinica!['enfermedadesCronicas'] ??
+                          InfoRow(
+                            label: 'Enfermedades Crónicas',
+                            value:
+                                _historiaClinica!['enfermedadesCronicas'] ??
                                 'Ninguna',
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
-                          _buildInfoRow(
-                            "Medicamentos",
-                            _historiaClinica!['medicamentos'] ?? 'Ninguno',
+                          InfoRow(
+                            label: 'Medicamentos',
+                            value:
+                                _historiaClinica!['medicamentos'] ?? 'Ninguno',
+                            labelWidth: 100,
+                            alignEnd: false,
+                            showColon: true,
+                            valueStyle: const TextStyle(),
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -392,25 +460,6 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
   }
 
   // Widget para mostrar información en filas
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              "$label:",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
   // Widget para mostrar diagnósticos
   Widget _buildDiagnosticoItem(Map<String, dynamic> registro) {
     final descripcion =

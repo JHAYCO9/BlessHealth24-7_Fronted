@@ -63,7 +63,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
     super.dispose();
   }
 
-  // Cargar historia clínica del paciente
+  // Cargar historia clnica del paciente
   Future<void> _cargarHistoriaClinica() async {
     try {
       final idPaciente = widget.cita['idPaciente'];
@@ -84,12 +84,12 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al cargar historia clínica: $e")),
+        SnackBar(content: Text("Error al cargar historia clnica: $e")),
       );
     }
   }
 
-  // Cargar diagnóstico existente si hay
+  // Cargar diagnstico existente si hay
   Future<void> _cargarDiagnostico() async {
     try {
       final idCita = widget.cita['idCita'];
@@ -134,17 +134,17 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al cargar diagnóstico: $e")),
+        SnackBar(content: Text("Error al cargar diagnstico: $e")),
       );
     }
   }
 
-  // Guardar diagnóstico
+  // Guardar diagnstico
   Future<void> _guardarDiagnostico() async {
     if (_idHistoriaClinica == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("No se encontró historia clínica del paciente"),
+          content: Text("No se encontr historia clnica del paciente"),
         ),
       );
       return;
@@ -167,7 +167,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "No se encontró un identificador de médico válido. Inicie sesión nuevamente.",
+              "No se encontr un identificador de mdico vlido. Inicie sesin nuevamente.",
             ),
           ),
         );
@@ -215,7 +215,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Diagnóstico guardado con éxito")),
+          const SnackBar(content: Text("Diagnstico guardado con xito")),
         );
         Navigator.pop(context, true);
       } else {
@@ -233,7 +233,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
         _guardando = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al guardar diagnóstico: $e")),
+        SnackBar(content: Text("Error al guardar diagnstico: $e")),
       );
     }
   }
@@ -314,7 +314,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                   indicatorColor: Colors.teal,
                   tabs: const [
                     Tab(text: "Datos"),
-                    Tab(text: "Diagnóstico"),
+                    Tab(text: "Diagnstico"),
                     Tab(text: "Archivos"),
                   ],
                 ),
@@ -323,17 +323,17 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Pestaña de Datos
-                    const Center(child: Text("Información del paciente")),
+                    // Pestaa de Datos
+                    const Center(child: Text("Informacin del paciente")),
 
-                    // Pestaña de Diagnóstico
+                    // Pestaa de Diagnstico
                     SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "Diagnóstico",
+                            "Diagnstico",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -371,11 +371,11 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                           ),
                           const SizedBox(height: 20),
 
-                          // Campo síntomas
+                          // Campo sntomas
                           TextField(
                             controller: _sintomasController,
                             decoration: InputDecoration(
-                              labelText: "Síntomas",
+                              labelText: "Sntomas",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -384,11 +384,11 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                           ),
                           const SizedBox(height: 20),
 
-                          // Campo presión arterial
+                          // Campo presin arterial
                           TextField(
                             controller: _presionArterialController,
                             decoration: InputDecoration(
-                              labelText: "Presión arterial",
+                              labelText: "Presin arterial",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -464,7 +464,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                           ),
                           const SizedBox(height: 30),
 
-                          // Botón de guardar
+                          // Botn de guardar
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -493,7 +493,7 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                       ),
                     ),
 
-                    // Pestaña de Archivos
+                    // Pestaa de Archivos
                     ArchivosPage(
                       cita: widget.cita,
                       nombrePaciente: widget.nombrePaciente,

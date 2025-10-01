@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:bless_health24/componentes/shared/info_row.dart';
+import 'package:bless_health24/componentes/shared/state_views.dart';
 
 import 'Archivos.dart';
 import 'HistoriaClinica.dart';
@@ -33,7 +39,7 @@ class _PacienteState extends State<Paciente>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     fetchPacienteData();
   }
 
@@ -84,35 +90,55 @@ class _PacienteState extends State<Paciente>
 
   // ----------------- Lógica principal -----------------
   Future<void> fetchPacienteData() async {
+    final documento = widget.documentoId.trim();
+    if (documento.isEmpty) {
+      setState(() {
+        isLoading = false;
+        errorMessage = 'El identificador del paciente es inválido.';
+        datosUsuario = {};
+        historiaClinica = {};
+      });
+      return;
+    }
+
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
     try {
-      // 1) Usuario por documento
-      final usuarioRes = await http.get(
-        Uri.parse('$baseUrl/usuarios/documento/${widget.documentoId}'),
-      );
-      if (usuarioRes.statusCode != 200) {
+      final usuarioRes = await http
+          .get(Uri.parse('$baseUrl/usuarios/documento/$documento'))
+          .timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+
+      if (usuarioRes.statusCode == 404) {
         setState(() {
-          errorMessage = 'Error al obtener usuario (${usuarioRes.statusCode}).';
+          errorMessage =
+              'No se encontró un paciente registrado con el documento $documento.';
           isLoading = false;
         });
         return;
       }
+      if (usuarioRes.statusCode >= 400) {
+        throw HttpException(
+          'Error ${usuarioRes.statusCode} al obtener el paciente.',
+        );
+      }
+
       final usuarioDecoded = json.decode(usuarioRes.body);
       final usuario = _firstMap(usuarioDecoded);
+      if (!mounted) return;
       if (usuario == null) {
         setState(() {
           errorMessage =
-              'No se encontró el usuario con documento ${widget.documentoId}.';
+              'No se encontró un paciente registrado con el documento $documento.';
           isLoading = false;
         });
         return;
       }
 
-      // Normaliza: esperamos nombres según BD
       final int? idPaciente = (usuario['idUsuario'] is int)
           ? usuario['idUsuario'] as int
           : int.tryParse('${usuario['idUsuario']}');
@@ -121,50 +147,75 @@ class _PacienteState extends State<Paciente>
         datosUsuario = usuario;
       });
 
-      // 2) Historias por idPaciente (fallback por documento)
       Map<String, dynamic> hcElegida = {};
       if (idPaciente != null) {
-        final hcRes = await http.get(
-          Uri.parse('$baseUrl/historias-clinicas/paciente/$idPaciente'),
-        );
+        final hcRes = await http
+            .get(Uri.parse('$baseUrl/historias-clinicas/paciente/$idPaciente'))
+            .timeout(const Duration(seconds: 15));
+
         if (hcRes.statusCode == 200) {
           final decoded = json.decode(hcRes.body);
           final lista = _asListOfMaps(decoded);
           if (lista.isNotEmpty) {
             hcElegida = lista.first;
-          } else {
-            // Fallback: por documento
-            final hcDocRes = await http.get(
-              Uri.parse(
-                '$baseUrl/historias-clinicas/documento/${widget.documentoId}',
-              ),
-            );
-            if (hcDocRes.statusCode == 200) {
-              final dec2 = json.decode(hcDocRes.body);
-              hcElegida = _firstMap(dec2) ?? {};
-            }
           }
-        } else {
-          // Fallback directo si 4xx/5xx
-          final hcDocRes = await http.get(
-            Uri.parse(
-              '$baseUrl/historias-clinicas/documento/${widget.documentoId}',
-            ),
+        } else if (hcRes.statusCode != 404) {
+          throw HttpException(
+            'Error ${hcRes.statusCode} al obtener la historia clínica por paciente.',
           );
-          if (hcDocRes.statusCode == 200) {
-            final dec2 = json.decode(hcDocRes.body);
-            hcElegida = _firstMap(dec2) ?? {};
-          }
         }
       }
 
+      if (hcElegida.isEmpty) {
+        final hcDocRes = await http
+            .get(Uri.parse('$baseUrl/historias-clinicas/documento/$documento'))
+            .timeout(const Duration(seconds: 15));
+
+        if (hcDocRes.statusCode == 200) {
+          final decoded = json.decode(hcDocRes.body);
+          hcElegida = _firstMap(decoded) ?? {};
+        } else if (hcDocRes.statusCode != 404) {
+          throw HttpException(
+            'Error ${hcDocRes.statusCode} al obtener la historia clínica por documento.',
+          );
+        }
+      }
+
+      if (!mounted) return;
       setState(() {
         historiaClinica = hcElegida;
         isLoading = false;
       });
-    } catch (e) {
+    } on TimeoutException {
+      if (!mounted) return;
       setState(() {
-        errorMessage = 'Error de conexión: $e';
+        errorMessage =
+            'La solicitud tardó demasiado. Verifica tu conexión e inténtalo de nuevo.';
+        isLoading = false;
+      });
+    } on SocketException {
+      if (!mounted) return;
+      setState(() {
+        errorMessage =
+            'No fue posible conectarse al servidor. Revisa tu conexión a internet.';
+        isLoading = false;
+      });
+    } on HttpException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = error.message;
+        isLoading = false;
+      });
+    } on FormatException {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = 'La respuesta del servidor tiene un formato inesperado.';
+        isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = 'Ocurrió un error inesperado: $error';
         isLoading = false;
       });
     }
@@ -197,6 +248,81 @@ class _PacienteState extends State<Paciente>
   Widget build(BuildContext context) {
     final nombre = _nombreCompleto(datosUsuario).toUpperCase();
 
+    Widget content;
+    if (isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (errorMessage.isNotEmpty) {
+      content = ErrorView(message: errorMessage, onRetry: fetchPacienteData);
+    } else if (datosUsuario.isEmpty) {
+      content = const EmptyView(
+        message: 'No hay información del paciente disponible.',
+      );
+    } else {
+      content = Column(
+        children: [
+          Container(
+            color: const Color(0xFF00B0BD),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Center(
+              child: Text(
+                nombre,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Datos'),
+              Tab(text: 'Diagnóstico'),
+              Tab(text: 'Archivos'),
+            ],
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: const Color(0xFF00B0BD),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDatosTab(),
+                _buildDiagnosticoTab(),
+                _buildArchivosTab(),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildActionButton(
+                  'Consultar Historia',
+                  _abrirHistoriaClinica,
+                  const Color(0xFF7DD1D8),
+                ),
+                _buildActionButton(
+                  'Remitir',
+                  _abrirRemitir,
+                  const Color(0xFF00B0BD),
+                ),
+                _buildActionButton(
+                  'Medicina',
+                  _abrirMedicina,
+                  const Color(0xFF00B0BD),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF00B0BD),
@@ -206,79 +332,7 @@ class _PacienteState extends State<Paciente>
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : errorMessage.isNotEmpty
-          ? Center(
-              child: Text(
-                errorMessage,
-                style: const TextStyle(color: Colors.red),
-              ),
-            )
-          : Column(
-              children: [
-                Container(
-                  color: const Color(0xFF00B0BD),
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Center(
-                    child: Text(
-                      nombre,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                TabBar(
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(text: 'Datos'),
-                    Tab(text: 'Diagnostico'),
-                    Tab(text: 'Archivos'),
-                  ],
-                  labelColor: Colors.black,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF00B0BD),
-                ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildDatosTab(),
-                      _buildDiagnosticoTab(),
-                      _buildNotasTab(),
-                      _buildArchivosTab(),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildActionButton(
-                        'Consultar Historia',
-                        _abrirHistoriaClinica,
-                        const Color(0xFF7DD1D8),
-                      ),
-                      _buildActionButton(
-                        'Remitir',
-                        _abrirRemitir,
-                        const Color(0xFF00B0BD),
-                      ),
-                      _buildActionButton(
-                        'Medicina',
-                        () => _abrirMedicina(),
-                        const Color(0xFF00B0BD),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      body: content,
     );
   }
 
@@ -484,45 +538,6 @@ class _PacienteState extends State<Paciente>
     );
   }
 
-  Widget _buildNotasTab() {
-    final antecedentes = (historiaClinica['antecedentesFamiliares'] ?? '')
-        .toString()
-        .trim();
-    final observaciones = (historiaClinica['observaciones'] ?? '')
-        .toString()
-        .trim();
-
-    if (antecedentes.isEmpty && observaciones.isEmpty) {
-      return const Center(child: Text('Sin notas registradas'));
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (antecedentes.isNotEmpty) ...[
-            const Text(
-              'Antecedentes familiares',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(antecedentes),
-            const SizedBox(height: 16),
-          ],
-          if (observaciones.isNotEmpty) ...[
-            const Text(
-              'Observaciones',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(observaciones),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildArchivosTab() {
     final idPaciente = _idPaciente;
     if (idPaciente == null) {
@@ -621,48 +636,23 @@ class _PacienteState extends State<Paciente>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Tipo de documento (id)', tipoDocId),
-          _buildInfoRow('Número', numeroDoc),
-          _buildInfoRow('Nombre', _nombreCompleto(datosUsuario)),
-          _buildInfoRow('Fecha de nacimiento', fechaNac),
-          _buildInfoRow('Edad', edad),
-          _buildInfoRow('Género', genero),
-          _buildInfoRow('Dirección', direccion),
-          _buildInfoRow('Teléfono', telefono),
-          _buildInfoRow('Correo', correo),
+          InfoRow(label: 'Tipo de documento (id)', value: tipoDocId),
+          InfoRow(label: 'Número', value: numeroDoc),
+          InfoRow(label: 'Nombre', value: _nombreCompleto(datosUsuario)),
+          InfoRow(label: 'Fecha de nacimiento', value: fechaNac),
+          InfoRow(label: 'Edad', value: edad),
+          InfoRow(label: 'Género', value: genero),
+          InfoRow(label: 'Dirección', value: direccion),
+          InfoRow(label: 'Teléfono', value: telefono),
+          InfoRow(label: 'Correo', value: correo),
           const Divider(height: 24),
-          _buildInfoRow('Alergias', alergias),
-          _buildInfoRow('Enfermedades crónicas', enfCron),
-          _buildInfoRow('Medicamentos', meds),
-          _buildInfoRow('Antecedentes familiares', antFam),
-          _buildInfoRow('Observaciones', obs),
-          _buildInfoRow('Fecha de creación', fcrea),
-          _buildInfoRow('Última actualización', factual),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 160,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.right,
-            ),
-          ),
+          InfoRow(label: 'Alergias', value: alergias),
+          InfoRow(label: 'Enfermedades crónicas', value: enfCron),
+          InfoRow(label: 'Medicamentos', value: meds),
+          InfoRow(label: 'Antecedentes familiares', value: antFam),
+          InfoRow(label: 'Observaciones', value: obs),
+          InfoRow(label: 'Fecha de creación', value: fcrea),
+          InfoRow(label: 'Última actualización', value: factual),
         ],
       ),
     );

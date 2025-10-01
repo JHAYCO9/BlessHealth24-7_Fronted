@@ -72,7 +72,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
     super.dispose();
   }
 
-  // Cargar historia clínica del paciente
+  // Cargar historia clnica del paciente
   Future<void> _cargarHistoriaClinica() async {
     try {
       final idPaciente = widget.cita['idPaciente'];
@@ -95,7 +95,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al cargar historia clínica: $e")),
+        SnackBar(content: Text("Error al cargar historia clnica: $e")),
       );
     }
   }
@@ -155,7 +155,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
     if (_idHistoriaClinica == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("No se encontró historia clínica del paciente"),
+          content: Text("No se encontr historia clnica del paciente"),
         ),
       );
       return;
@@ -178,7 +178,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "No se encontró un identificador de médico válido. Inicie sesión nuevamente.",
+              "No se encontr un identificador de mdico vlido. Inicie sesin nuevamente.",
             ),
           ),
         );
@@ -220,7 +220,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Consulta guardada con éxito")),
+          const SnackBar(content: Text("Consulta guardada con xito")),
         );
         Navigator.pop(context, true);
       } else {
@@ -336,10 +336,10 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Pestaña de Datos
-                    const Center(child: Text("Información del paciente")),
+                    // Pestaa de Datos
+                    const Center(child: Text("Informacin del paciente")),
 
-                    // Pestaña de Consulta (antes Diagnóstico)
+                    // Pestaa de Consulta (antes Diagnstico)
                     SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -384,11 +384,11 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                           ),
                           const SizedBox(height: 20),
 
-                          // Campo de síntomas
+                          // Campo de sntomas
                           TextField(
                             controller: _sintomasController,
                             decoration: InputDecoration(
-                              labelText: "Síntomas",
+                              labelText: "Sntomas",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -404,7 +404,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                                 child: TextField(
                                   controller: _presionArterialController,
                                   decoration: InputDecoration(
-                                    labelText: "Presión Arterial",
+                                    labelText: "Presin Arterial",
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -416,7 +416,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                                 child: TextField(
                                   controller: _frecuenciaCardiacaController,
                                   decoration: InputDecoration(
-                                    labelText: "Frecuencia Cardíaca",
+                                    labelText: "Frecuencia Cardaca",
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -465,7 +465,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                           ),
                           const SizedBox(height: 30),
 
-                          // Botón de guardar
+                          // Botn de guardar
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -492,7 +492,7 @@ class _DiagnosticoPacientePageState extends State<DiagnosticoPacientePage>
                       ),
                     ),
 
-                    // Pestaña de Archivos
+                    // Pestaa de Archivos
                     ArchivosPage(
                       cita: widget.cita,
                       nombrePaciente: widget.nombrePaciente,

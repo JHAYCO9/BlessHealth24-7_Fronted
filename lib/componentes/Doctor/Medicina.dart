@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'signature_pad.dart';
 import 'archivos_local_helper.dart';
+import 'package:bless_health24/componentes/shared/info_row.dart';
 
 class MedicinaPage extends StatefulWidget {
   final int idHistoriaClinica;
@@ -484,22 +485,47 @@ class _MedicinaPageState extends State<MedicinaPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildInfoRow(
-                  'Documento:',
-                  '${paciente['numeroDocumento'] ?? 'N/A'}',
+                InfoRow(
+                  label: 'Documento',
+                  value: '${paciente['numeroDocumento'] ?? 'N/A'}',
+                  labelWidth: 120,
+                  alignEnd: false,
+                  showColon: true,
+                  valueStyle: const TextStyle(),
                 ),
-                _buildInfoRow(
-                  'Edad:',
-                  _calcularEdad(paciente['fechaNacimiento']?.toString()),
+                InfoRow(
+                  label: 'Edad',
+                  value: _calcularEdad(paciente['fechaNacimiento']?.toString()),
+                  labelWidth: 120,
+                  alignEnd: false,
+                  showColon: true,
+                  valueStyle: const TextStyle(),
                 ),
-                _buildInfoRow('GÃ©nero:', '${paciente['genero'] ?? 'N/A'}'),
-                _buildInfoRow(
-                  'TelÃ©fono:',
-                  '${paciente['telefonoUsuario'] ?? 'N/A'}',
+                InfoRow(
+                  label: 'Género',
+                  value: '${paciente['genero'] ?? 'N/A'}',
+                  labelWidth: 120,
+                  alignEnd: false,
+                  showColon: true,
+                  valueStyle: const TextStyle(),
                 ),
-                _buildInfoRow(
-                  'Ciudad:',
-                  _extraerCiudad(paciente['direccionUsuario']?.toString()),
+                InfoRow(
+                  label: 'Teléfono',
+                  value: '${paciente['telefonoUsuario'] ?? 'N/A'}',
+                  labelWidth: 120,
+                  alignEnd: false,
+                  showColon: true,
+                  valueStyle: const TextStyle(),
+                ),
+                InfoRow(
+                  label: 'Ciudad',
+                  value: _extraerCiudad(
+                    paciente['direccionUsuario']?.toString(),
+                  ),
+                  labelWidth: 120,
+                  alignEnd: false,
+                  showColon: true,
+                  valueStyle: const TextStyle(),
                 ),
                 const SizedBox(height: 16),
 
@@ -627,25 +653,6 @@ class _MedicinaPageState extends State<MedicinaPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
     );
   }
 }
