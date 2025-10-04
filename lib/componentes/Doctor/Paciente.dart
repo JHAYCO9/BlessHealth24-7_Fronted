@@ -4,15 +4,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bless_health24/componentes/shared/info_row.dart';
 import 'package:bless_health24/componentes/shared/state_views.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
 
 import 'Archivos.dart';
 import 'HistoriaClinica.dart';
 import 'Medicina.dart';
 import 'Remitir.dart';
+import 'doctor_helpers.dart';
 
 class Paciente extends StatefulWidget {
   final String documentoId;
@@ -332,7 +333,31 @@ class _PacienteState extends State<Paciente>
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: content,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset('assets/images/Fondo.png', fit: BoxFit.cover),
+          ),
+          Positioned.fill(
+            child: Container(color: Colors.white.withOpacity(0.85)),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: const AppLogoBadge(),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 140, 16, 16),
+              child: content,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -382,26 +407,6 @@ class _PacienteState extends State<Paciente>
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<String> _obtenerNombreDoctor() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final nombre =
-          prefs.getString('nombreDoctor') ??
-          prefs.getString('nombreMedico') ??
-          prefs.getString('nombreUsuario') ??
-          '';
-      final apellido =
-          prefs.getString('apellidoDoctor') ??
-          prefs.getString('apellidoMedico') ??
-          prefs.getString('apellidoUsuario') ??
-          '';
-      final completo = '$nombre $apellido'.trim();
-      return completo.isEmpty ? 'Doctor' : completo;
-    } catch (_) {
-      return 'Doctor';
-    }
-  }
-
   void _abrirHistoriaClinica() {
     Navigator.of(
       context,
@@ -427,6 +432,8 @@ class _PacienteState extends State<Paciente>
           idPaciente: idPaciente,
           idRegistroConsulta: idRegistro,
           nombrePaciente: _nombreCompleto(datosUsuario),
+          documentoPaciente: datosUsuario['numeroDocumento']?.toString(),
+          idHistoriaClinica: _idHistoriaClinica,
         ),
       ),
     );
@@ -439,7 +446,7 @@ class _PacienteState extends State<Paciente>
       return;
     }
 
-    final nombreDoctor = await _obtenerNombreDoctor();
+    final nombreDoctor = await loadDoctorFullName();
     if (!mounted) return;
 
     Navigator.of(context).push(

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class CancelarCitaPage extends StatefulWidget {
+  const CancelarCitaPage({super.key});
+
   @override
   _CancelarCitaPageState createState() => _CancelarCitaPageState();
 }

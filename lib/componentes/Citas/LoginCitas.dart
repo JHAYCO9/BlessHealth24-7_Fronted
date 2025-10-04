@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
           final refreshToken = data["data"]["refreshToken"];
           final usuario = data["data"]["usuario"];
           final idPaciente =
-              data["data"]["usuario"]["idUsuario"]; // 👈 este es el idPaciente
+              data["data"]["usuario"]["idUsuario"]; //  este es el idPaciente
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString("token", token);

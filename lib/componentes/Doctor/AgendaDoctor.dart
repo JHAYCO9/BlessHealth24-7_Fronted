@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
 import 'AtenderPaciente.dart';
 import 'DiagnosticoPaciente.dart';
 import 'Paciente.dart';
 
 class AgendaDoctorPage extends StatefulWidget {
-  const AgendaDoctorPage({Key? key}) : super(key: key);
+  const AgendaDoctorPage({super.key});
 
   @override
   State<AgendaDoctorPage> createState() => _AgendaDoctorPageState();
@@ -274,6 +275,8 @@ class _AgendaDoctorPageState extends State<AgendaDoctorPage> {
           Column(
             children: [
               const SizedBox(height: 20),
+              const Center(child: AppLogoBadge()),
+              const SizedBox(height: 24),
               // Fecha seleccionada
               Container(
                 padding: const EdgeInsets.symmetric(

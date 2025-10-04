@@ -1,17 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
 import 'package:http/http.dart' as http;
+
+import 'Archivos.dart';
+import 'doctor_action_bar.dart';
 
 class RemitirPage extends StatefulWidget {
   final int idPaciente; // <- id del paciente
   final int idRegistroConsulta; // <- requerido por ORDENES_MEDICAS
   final String nombrePaciente;
+  final String? documentoPaciente;
+  final int? idHistoriaClinica;
 
   const RemitirPage({
     super.key,
     required this.idPaciente,
     required this.idRegistroConsulta,
     required this.nombrePaciente,
+    this.documentoPaciente,
+    this.idHistoriaClinica,
   });
 
   @override
@@ -106,13 +114,16 @@ class _RemitirPageState extends State<RemitirPage> {
         setState(() {
           _pacienteUI = {
             'nombreCompleto': ('$nombre $apellido').trim(),
-            'documento': numeroDocumento,
+            'documento': numeroDocumento.isEmpty ? 'N/A' : numeroDocumento,
             'edad': _calcularEdad(fechaNac),
             'genero': genero.isEmpty ? 'N/A' : genero,
             'telefono': telefono.isEmpty ? 'N/A' : telefono,
             'direccion': direccion.isEmpty ? 'N/A' : direccion,
             'ciudad': _soloCiudad(direccion),
-            'idHistoriaClinica': data['idHistoriaClinica']?.toString() ?? '',
+            'idHistoriaClinica':
+                (widget.idHistoriaClinica ?? data['idHistoriaClinica'])
+                    ?.toString() ??
+                '',
             'tipoSangre': data['tipoSangre']?.toString() ?? 'N/A',
             'fechaCreacion': data['fechaCreacion']?.toString() ?? '',
           };
@@ -195,6 +206,11 @@ class _RemitirPageState extends State<RemitirPage> {
 
   @override
   Widget build(BuildContext context) {
+    final idHistoria =
+        widget.idHistoriaClinica ??
+        int.tryParse((_pacienteUI['idHistoriaClinica'] ?? '').toString());
+    final quickActions = _buildQuickActionItems(idHistoriaClinica: idHistoria);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -221,6 +237,11 @@ class _RemitirPageState extends State<RemitirPage> {
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
+                  const SizedBox(height: 12),
+                  if (quickActions.isNotEmpty)
+                    DoctorActionBar(actions: quickActions),
+                  const Center(child: AppLogoBadge()),
+                  const SizedBox(height: 24),
                   // Encabezado con el paciente
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -272,7 +293,7 @@ class _RemitirPageState extends State<RemitirPage> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            "Documento: CC ${_pacienteUI['documento'] ?? ''}",
+                            "Documento: ${_pacienteUI['documento'] ?? 'N/A'}",
                             style: const TextStyle(color: Colors.grey),
                           ),
                           Text(
@@ -418,6 +439,36 @@ class _RemitirPageState extends State<RemitirPage> {
               ),
             ),
     );
+  }
+
+  void _abrirArchivos({int? idHistoriaClinica}) {
+    final cita = <String, dynamic>{'idPaciente': widget.idPaciente};
+    if (idHistoriaClinica != null) {
+      cita['idHistoriaClinica'] = idHistoriaClinica;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArchivosPage(
+          cita: cita,
+          nombrePaciente: widget.nombrePaciente,
+          idRegistroConsulta: widget.idRegistroConsulta,
+        ),
+      ),
+    );
+  }
+
+  List<DoctorAction> _buildQuickActionItems({required int? idHistoriaClinica}) {
+    final actions = <DoctorAction>[];
+
+    actions.add(
+      DoctorAction(
+        icon: Icons.folder_open,
+        label: 'Archivos',
+        onPressed: () => _abrirArchivos(idHistoriaClinica: idHistoriaClinica),
+      ),
+    );
+
+    return actions;
   }
 
   Widget _boxedField({required Widget child}) {

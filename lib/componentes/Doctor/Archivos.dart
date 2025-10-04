@@ -1,5 +1,6 @@
 import "dart:convert";
 import "package:flutter/material.dart";
+import "package:bless_health24/componentes/shared/app_logo_badge.dart";
 import "package:http/http.dart" as http;
 import "archivos_local_helper.dart";
 
@@ -175,6 +176,9 @@ class _ArchivosPageState extends State<ArchivosPage> {
           ),
           Column(
             children: [
+              const SizedBox(height: 16),
+              const Center(child: AppLogoBadge()),
+              const SizedBox(height: 16),
               Container(
                 color: const Color(0xFF00BCD4),
                 width: double.infinity,

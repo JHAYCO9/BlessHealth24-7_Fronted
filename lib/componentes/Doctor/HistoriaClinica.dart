@@ -7,11 +7,26 @@ import 'package:http/http.dart' as http;
 
 import 'package:bless_health24/componentes/shared/info_row.dart';
 import 'package:bless_health24/componentes/shared/state_views.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
 
 import 'Archivos.dart';
+import 'Paciente.dart';
+import 'doctor_action_bar.dart';
+import 'Medicina.dart';
+import 'Remitir.dart';
+import 'doctor_helpers.dart';
 
 class HistoriaClinicaPage extends StatefulWidget {
-  const HistoriaClinicaPage({super.key});
+  final String? initialDocumento;
+  final bool autoSearch;
+  final bool mostrarArchivosInicial;
+
+  const HistoriaClinicaPage({
+    super.key,
+    this.initialDocumento,
+    this.autoSearch = false,
+    this.mostrarArchivosInicial = false,
+  });
 
   @override
   State<HistoriaClinicaPage> createState() => _HistoriaClinicaPageState();
@@ -39,6 +54,24 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _mostrarArchivos = widget.mostrarArchivosInicial;
+    final documento = widget.initialDocumento?.trim();
+    if (documento != null && documento.isNotEmpty) {
+      _documentoController.text = documento;
+      if (widget.autoSearch) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _buscarHistoriaClinica(
+            mostrarArchivosLuego: widget.mostrarArchivosInicial,
+          );
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _documentoController.dispose();
     super.dispose();
@@ -46,7 +79,9 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
 
   // Buscar historia clínica por documento
 
-  Future<void> _buscarHistoriaClinica() async {
+  Future<void> _buscarHistoriaClinica({
+    bool mostrarArchivosLuego = false,
+  }) async {
     final documento = _documentoController.text.trim();
     if (documento.isEmpty) {
       setState(() {
@@ -121,6 +156,7 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
           'nombres': paciente['nombreUsuario'],
           'apellidos': paciente['apellidoUsuario'],
         };
+        _mostrarArchivos = mostrarArchivosLuego;
       });
     } on TimeoutException {
       if (!mounted) return;
@@ -183,6 +219,9 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
         primerRegistro != null && primerRegistro['idRegistroConsulta'] is int
         ? primerRegistro['idRegistroConsulta'] as int
         : null;
+    final List<DoctorAction> quickActions = _buildQuickActionItems(
+      idRegistroConsulta,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -203,6 +242,10 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 12),
+                const Center(child: AppLogoBadge()),
+                const SizedBox(height: 24),
+                if (quickActions.isNotEmpty) ...[const SizedBox(height: 16)],
                 // Buscador de historia clínica
                 if (!_mostrarArchivos) ...[
                   Card(
@@ -241,7 +284,7 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
                             child: ElevatedButton(
                               onPressed: _cargando
                                   ? null
-                                  : _buscarHistoriaClinica,
+                                  : () => _buscarHistoriaClinica(),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF7FDCDC),
                                 foregroundColor: Colors.white,
@@ -269,7 +312,7 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
                   const SizedBox(height: 16),
                   ErrorView(
                     message: _mensajeError,
-                    onRetry: _buscarHistoriaClinica,
+                    onRetry: () => _buscarHistoriaClinica(),
                   ),
                 ],
 
@@ -385,11 +428,9 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
                           ),
                           const SizedBox(height: 8),
                           if (registrosConsultas.isNotEmpty)
-                            ...registrosConsultas
-                                .map<Widget>(
-                                  (registro) => _buildDiagnosticoItem(registro),
-                                )
-                                .toList()
+                            ...registrosConsultas.map<Widget>(
+                              (registro) => _buildDiagnosticoItem(registro),
+                            )
                           else
                             const Text("No hay diagnósticos registrados"),
                         ],
@@ -457,6 +498,152 @@ class _HistoriaClinicaPageState extends State<HistoriaClinicaPage> {
         ],
       ),
     );
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  int? _parseIntValue(dynamic value) {
+    if (value is int) return value;
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return int.tryParse(trimmed);
+    }
+    return null;
+  }
+
+  void _abrirPacienteDesdeHistoria(String documento) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => Paciente(documentoId: documento)));
+  }
+
+  void _abrirRemitirDesdeHistoria({
+    required int idPaciente,
+    required int? idRegistroConsulta,
+  }) {
+    if (idRegistroConsulta == null) {
+      _showSnack('No hay un registro de consulta para remitir al paciente.');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RemitirPage(
+          idPaciente: idPaciente,
+          idRegistroConsulta: idRegistroConsulta,
+          nombrePaciente: _nombrePaciente.isEmpty
+              ? 'Paciente'
+              : _nombrePaciente,
+          documentoPaciente: _datosPaciente['cedula']?.toString(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _abrirMedicinaDesdeHistoria(int idHistoriaClinica) async {
+    final nombreDoctor = await loadDoctorFullName();
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MedicinaPage(
+          idHistoriaClinica: idHistoriaClinica,
+          nombreDoctor: nombreDoctor,
+        ),
+      ),
+    );
+  }
+
+  void _abrirArchivosDesdeHistoria({
+    int? idPaciente,
+    int? idHistoriaClinica,
+    int? idRegistroConsulta,
+  }) {
+    if (idPaciente == null && idHistoriaClinica == null) {
+      _showSnack('No hay datos suficientes para mostrar los archivos.');
+      return;
+    }
+    final cita = <String, dynamic>{};
+    if (idPaciente != null) cita['idPaciente'] = idPaciente;
+    if (idHistoriaClinica != null) {
+      cita['idHistoriaClinica'] = idHistoriaClinica;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArchivosPage(
+          cita: cita,
+          nombrePaciente: _nombrePaciente.isEmpty
+              ? 'Paciente'
+              : _nombrePaciente,
+          idRegistroConsulta: idRegistroConsulta,
+        ),
+      ),
+    );
+  }
+
+  List<DoctorAction> _buildQuickActionItems(int? idRegistroConsulta) {
+    if (_historiaClinica == null) {
+      return const <DoctorAction>[];
+    }
+    final actions = <DoctorAction>[];
+    final documento = (_datosPaciente['cedula'] ?? '').toString().trim();
+    final idPaciente = _parseIntValue(_datosPaciente['idPaciente']);
+    final idHistoria = _parseIntValue(_historiaClinica?['idHistoriaClinica']);
+
+    if (documento.isNotEmpty) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.person_outline,
+          label: 'Paciente',
+          onPressed: () => _abrirPacienteDesdeHistoria(documento),
+        ),
+      );
+    }
+
+    if (idPaciente != null || idHistoria != null) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.folder_open,
+          label: 'Archivos',
+          onPressed: () => _abrirArchivosDesdeHistoria(
+            idPaciente: idPaciente,
+            idHistoriaClinica: idHistoria,
+            idRegistroConsulta: idRegistroConsulta,
+          ),
+        ),
+      );
+    }
+
+    if (idPaciente != null && idRegistroConsulta != null) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.assignment_turned_in_outlined,
+          label: 'Remitir',
+          onPressed: () => _abrirRemitirDesdeHistoria(
+            idPaciente: idPaciente,
+            idRegistroConsulta: idRegistroConsulta,
+          ),
+        ),
+      );
+    }
+
+    if (idHistoria != null) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.healing_outlined,
+          label: 'Medicina',
+          onPressed: () => _abrirMedicinaDesdeHistoria(idHistoria),
+        ),
+      );
+    }
+
+    return actions;
   }
 
   // Widget para mostrar información en filas

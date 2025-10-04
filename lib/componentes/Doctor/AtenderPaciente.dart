@@ -3,6 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
+import 'DiagnosticoPaciente.dart';
+import 'HistoriaClinica.dart';
+import 'Medicina.dart';
+import 'Paciente.dart';
+import 'Remitir.dart';
+import 'doctor_action_bar.dart';
+import 'doctor_helpers.dart';
 import 'Archivos.dart';
 
 class AtenderPacientePage extends StatefulWidget {
@@ -10,10 +18,10 @@ class AtenderPacientePage extends StatefulWidget {
   final String nombrePaciente;
 
   const AtenderPacientePage({
-    Key? key,
+    super.key,
     required this.cita,
     required this.nombrePaciente,
-  }) : super(key: key);
+  });
 
   @override
   State<AtenderPacientePage> createState() => _AtenderPacientePageState();
@@ -133,9 +141,9 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al cargar diagnstico: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error al cargar diagnstico: $e")));
     }
   }
 
@@ -264,6 +272,14 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
 
   @override
   Widget build(BuildContext context) {
+    final documentoPaciente = extractDocumentoPaciente(widget.cita) ?? '';
+    final int? idPaciente = extractIdPaciente(widget.cita);
+    final quickActions = _buildQuickActionItems(
+      documentoPaciente: documentoPaciente,
+      idPaciente: idPaciente,
+      idRegistroConsulta: _idRegistroConsulta,
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -285,6 +301,9 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
           ),
           Column(
             children: [
+              const SizedBox(height: 16),
+              const Center(child: AppLogoBadge()),
+              const SizedBox(height: 16),
               Container(
                 color: const Color(0xFF00BCD4),
                 width: double.infinity,
@@ -299,6 +318,8 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
                   textAlign: TextAlign.center,
                 ),
               ),
+              if (quickActions.isNotEmpty)
+                DoctorActionBar(actions: quickActions),
               Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -507,5 +528,154 @@ class _AtenderPacientePageState extends State<AtenderPacientePage>
         ],
       ),
     );
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _abrirPacienteDetalle(String documento) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => Paciente(documentoId: documento)));
+  }
+
+  void _abrirHistoriaClinica(String documento) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            HistoriaClinicaPage(initialDocumento: documento, autoSearch: true),
+      ),
+    );
+  }
+
+  void _abrirArchivosDesdeCita() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArchivosPage(
+          cita: widget.cita,
+          nombrePaciente: widget.nombrePaciente,
+          idRegistroConsulta: _idRegistroConsulta,
+        ),
+      ),
+    );
+  }
+
+  void _abrirDiagnosticoPaciente() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DiagnosticoPacientePage(
+          cita: widget.cita,
+          nombrePaciente: widget.nombrePaciente,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _abrirMedicina(int idHistoriaClinica) async {
+    final nombreDoctor = await loadDoctorFullName();
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MedicinaPage(
+          idHistoriaClinica: idHistoriaClinica,
+          nombreDoctor: nombreDoctor,
+        ),
+      ),
+    );
+  }
+
+  void _abrirRemitirPaciente({
+    required int idPaciente,
+    required int? idRegistroConsulta,
+    String? documento,
+  }) {
+    if (idRegistroConsulta == null) {
+      _showSnack('Registra una consulta antes de remitir al paciente.');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RemitirPage(
+          idPaciente: idPaciente,
+          idRegistroConsulta: idRegistroConsulta,
+          nombrePaciente: widget.nombrePaciente,
+          documentoPaciente: documento,
+          idHistoriaClinica: _idHistoriaClinica,
+        ),
+      ),
+    );
+  }
+
+  List<DoctorAction> _buildQuickActionItems({
+    required String? documentoPaciente,
+    required int? idPaciente,
+    required int? idRegistroConsulta,
+  }) {
+    final actions = <DoctorAction>[];
+    final documento = documentoPaciente?.trim();
+    final idHistoria = _idHistoriaClinica;
+
+    if (documento != null && documento.isNotEmpty) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.person_outline,
+          label: 'Paciente',
+          onPressed: () => _abrirPacienteDetalle(documento),
+        ),
+      );
+      actions.add(
+        DoctorAction(
+          icon: Icons.history_edu_outlined,
+          label: 'Historia',
+          onPressed: () => _abrirHistoriaClinica(documento),
+        ),
+      );
+    }
+
+    actions.add(
+      DoctorAction(
+        icon: Icons.folder_open,
+        label: 'Archivos',
+        onPressed: _abrirArchivosDesdeCita,
+      ),
+    );
+
+    actions.add(
+      DoctorAction(
+        icon: Icons.receipt_long_outlined,
+        label: 'Diagnóstico',
+        onPressed: _abrirDiagnosticoPaciente,
+      ),
+    );
+
+    if (idPaciente != null) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.assignment_turned_in_outlined,
+          label: 'Remitir',
+          onPressed: () => _abrirRemitirPaciente(
+            idPaciente: idPaciente,
+            idRegistroConsulta: idRegistroConsulta,
+            documento: documento,
+          ),
+        ),
+      );
+    }
+
+    if (idHistoria != null) {
+      actions.add(
+        DoctorAction(
+          icon: Icons.healing_outlined,
+          label: 'Medicina',
+          onPressed: () => _abrirMedicina(idHistoria),
+        ),
+      );
+    }
+
+    return actions;
   }
 }

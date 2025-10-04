@@ -4,7 +4,7 @@ import '../Citas/CancelarCita.dart';
 import '../Citas/VerCitas.dart';
 
 class MenuCitasPage extends StatelessWidget {
-  const MenuCitasPage({Key? key}) : super(key: key);
+  const MenuCitasPage({super.key});
 
   Widget _botonMenu(BuildContext context, String texto, VoidCallback onTap) {
     return ElevatedButton(

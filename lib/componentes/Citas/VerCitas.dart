@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class VerCitasScreen extends StatefulWidget {
-  const VerCitasScreen({Key? key}) : super(key: key);
+  const VerCitasScreen({super.key});
 
   @override
   _VerCitasScreenState createState() => _VerCitasScreenState();

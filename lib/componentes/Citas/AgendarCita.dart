@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AgendarCitaPage extends StatefulWidget {
-  const AgendarCitaPage({Key? key}) : super(key: key);
+  const AgendarCitaPage({super.key});
 
   @override
   State<AgendarCitaPage> createState() => _AgendarCitaPageState();
@@ -121,7 +121,7 @@ class _AgendarCitaPageState extends State<AgendarCitaPage> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.grey[100],
@@ -305,11 +305,11 @@ class AgendarCitaFormPage extends StatefulWidget {
   final int idSede;
 
   const AgendarCitaFormPage({
-    Key? key,
+    super.key,
     required this.idMedico,
     required this.idServicio,
     required this.idSede,
-  }) : super(key: key);
+  });
 
   @override
   State<AgendarCitaFormPage> createState() => _AgendarCitaFormPageState();

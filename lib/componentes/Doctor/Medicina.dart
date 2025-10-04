@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'signature_pad.dart';
 import 'archivos_local_helper.dart';
 import 'package:bless_health24/componentes/shared/info_row.dart';
+import 'package:bless_health24/componentes/shared/app_logo_badge.dart';
 
 class MedicinaPage extends StatefulWidget {
   final int idHistoriaClinica;
@@ -435,6 +436,9 @@ class _MedicinaPageState extends State<MedicinaPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const SizedBox(height: 12),
+        const Center(child: AppLogoBadge()),
+        const SizedBox(height: 24),
         // Nombre del mÃ©dico
         Container(
           padding: const EdgeInsets.symmetric(vertical: 12),

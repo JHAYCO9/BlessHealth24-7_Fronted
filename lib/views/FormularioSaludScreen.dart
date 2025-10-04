@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:bless_health24/views/FormularioSaludScreen.dart';
 import 'package:bless_health24/views/ResultadoScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -135,7 +134,7 @@ class _FormularioSaludScreenState extends State<FormularioSaludScreen> {
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(labelText: label, filled: true, fillColor: Colors.white),
       items: opciones.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
