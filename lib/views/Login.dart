@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../componentes/buttons/Button1.dart';
 import 'Registro.dart';
 import 'PrincipalPage.dart';
@@ -24,9 +25,10 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // ✅ URL de la API en Render
+      // ? URL de la API en Render
       final uri = Uri.parse(
-          'https://blesshealth24-7-backecommerce.onrender.com/auth/iniciar-sesion');
+        'https://blesshealth24-7-backecommerce.onrender.com/auth/iniciar-sesion',
+      );
 
       final response = await http.post(
         uri,
@@ -39,32 +41,87 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("✅ Login exitoso: $data");
+        print("? Login exitoso: $data");
 
-        // Navegar a HomePage reemplazando LoginPage
+        final prefs = await SharedPreferences.getInstance();
+
+        final token = data['token']?.toString();
+        if (token != null && token.isNotEmpty) {
+          await prefs.setString('authToken', token);
+        } else {
+          await prefs.remove('authToken');
+        }
+
+        final usuario = data['usuario'];
+        if (usuario is Map<String, dynamic>) {
+          final userId = (usuario['id'] as num?)?.toInt();
+          if (userId != null && userId > 0) {
+            await prefs.setInt('usuarioId', userId);
+          } else {
+            await prefs.remove('usuarioId');
+          }
+
+          await prefs.setString(
+            'usuarioNombre',
+            usuario['nombre']?.toString() ?? '',
+          );
+          await prefs.setString(
+            'usuarioApellido',
+            usuario['apellido']?.toString() ?? '',
+          );
+          await prefs.setString(
+            'usuarioCorreo',
+            usuario['email']?.toString() ?? '',
+          );
+
+          final rolId = (usuario['rolId'] as num?)?.toInt();
+          if (rolId != null) {
+            await prefs.setInt('usuarioRolId', rolId);
+          } else {
+            await prefs.remove('usuarioRolId');
+          }
+        } else {
+          await prefs.remove('usuarioId');
+          await prefs.remove('usuarioNombre');
+          await prefs.remove('usuarioApellido');
+          await prefs.remove('usuarioCorreo');
+          await prefs.remove('usuarioRolId');
+        }
+
+        await prefs.setBool('usuarioSesionActiva', data['active'] == true);
+
+        if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const HomePage(),
-          ),
+          MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else {
-        print("❌ Error: ${response.statusCode}");
+        print("? Error: ${response.statusCode}");
         print("Respuesta: ${response.body}");
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${response.body}")));
+        if (mounted) {
+          final mensajeError = response.body.isNotEmpty
+              ? response.body
+              : 'Error: ${response.statusCode}';
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(mensajeError)));
+        }
       }
     } catch (e) {
-      print("⚠️ Error de conexión: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error de conexión con el servidor")),
-      );
+      print("?? Error de conexión: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error de conexión con el servidor")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
   @override
@@ -145,9 +202,9 @@ class _LoginPageState extends State<LoginPage> {
                     child: loading
                         ? const CircularProgressIndicator()
                         : const Text(
-                      "Iniciar Sesión",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                            "Iniciar Sesión",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
               ],

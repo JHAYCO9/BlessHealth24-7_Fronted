@@ -3,7 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Doctor/AgendaDoctor.dart';
 
 class CustomNavbar extends StatelessWidget {
-  const CustomNavbar({super.key});
+  const CustomNavbar({super.key, this.cartItemCount = 0, this.onCartPressed});
+
+  final int cartItemCount;
+  final VoidCallback? onCartPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -52,16 +55,41 @@ class CustomNavbar extends StatelessWidget {
                   ),
                 ],
               ),
-              // Ícono de carrito
-              IconButton(
-                icon: const Icon(
-                  Icons.shopping_cart,
-                  color: Colors.teal,
-                  size: 28,
-                ),
-                onPressed: () {
-                  // Acción al presionar
-                },
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.shopping_cart,
+                      color: Colors.teal,
+                      size: 28,
+                    ),
+                    onPressed: onCartPressed ?? () {},
+                  ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          cartItemCount > 99 ? '99+' : '$cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

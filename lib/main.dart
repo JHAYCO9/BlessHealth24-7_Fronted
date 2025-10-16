@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import './views/loadingScreen.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // 👈 inicializa los plugins
+  WidgetsFlutterBinding.ensureInitialized();
 
   // Opcional: forzar inicialización de SharedPreferences
   await SharedPreferences.getInstance();
