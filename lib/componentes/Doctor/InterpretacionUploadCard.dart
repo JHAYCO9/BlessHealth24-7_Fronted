@@ -2,17 +2,23 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:bless_health24/services/nlp_hc_service.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'archivos_local_helper.dart';
 
 class InterpretacionUploadCard extends StatefulWidget {
   final int? idHistoriaClinica;
+  final int? idPaciente;
   final VoidCallback? onSaved;
+  final bool enviarANlp;
 
   const InterpretacionUploadCard({
     super.key,
     required this.idHistoriaClinica,
+    this.idPaciente,
     this.onSaved,
+    this.enviarANlp = true,
   });
 
   @override
@@ -41,27 +47,70 @@ class _InterpretacionUploadCardState extends State<InterpretacionUploadCard> {
 
     setState(() => _guardando = true);
     try {
+      final archivoNombre =
+          _nombreArchivo ?? 'archivo_${DateTime.now().millisecondsSinceEpoch}';
+      final mime = _tipoArchivo ?? 'application/octet-stream';
+      final bytes = _bytesSeleccionados!;
+
       await ArchivosLocalHelper.addBytes(
         idHistoriaClinica: widget.idHistoriaClinica,
-        nombre:
-            _nombreArchivo ??
-            'archivo_${DateTime.now().millisecondsSinceEpoch}',
-        mimeType: _tipoArchivo ?? 'application/octet-stream',
-        bytes: _bytesSeleccionados!,
+        nombre: archivoNombre,
+        mimeType: mime,
+        bytes: bytes,
       );
+
+      if (_debeEnviarAlServicioNlp) {
+        await _enviarAlServicioNlp(bytes, archivoNombre);
+      }
+
       setState(() {
         _bytesSeleccionados = null;
         _nombreArchivo = null;
         _tipoArchivo = null;
       });
       widget.onSaved?.call();
-      _mostrarMensaje('Archivo guardado correctamente.');
+      if (!_debeEnviarAlServicioNlp) {
+        final extraNlp = widget.enviarANlp && widget.idPaciente == null
+            ? '\nAgrega el idPaciente para enviar el archivo al servicio NLP.'
+            : '';
+        _mostrarMensaje('Archivo guardado correctamente.$extraNlp');
+      }
     } catch (e) {
       _mostrarMensaje('No se pudo guardar el archivo: $e');
     } finally {
       if (mounted) {
         setState(() => _guardando = false);
       }
+    }
+  }
+
+  bool get _debeEnviarAlServicioNlp =>
+      widget.enviarANlp &&
+      widget.idHistoriaClinica != null &&
+      widget.idPaciente != null;
+
+  Future<void> _enviarAlServicioNlp(
+    Uint8List bytes,
+    String nombreArchivo,
+  ) async {
+    try {
+      final result = await NlpHcService.processHistoriaClinica(
+        idHistoriaClinica: widget.idHistoriaClinica!,
+        idPaciente: widget.idPaciente!,
+        fileBytes: bytes,
+        fileName: nombreArchivo,
+      );
+
+      var mensaje = result.message;
+      if (result.excelReady == true) {
+        mensaje +=
+            '\nEl Excel ha sido generado. Puedes descargarlo desde el panel de NLP.';
+      }
+      _mostrarMensaje(mensaje);
+    } catch (e) {
+      _mostrarMensaje(
+        'Archivo guardado, pero el servicio NLP no está disponible: $e',
+      );
     }
   }
 

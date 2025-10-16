@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "package:bless_health24/componentes/shared/app_logo_badge.dart";
 import "package:http/http.dart" as http;
 import "archivos_local_helper.dart";
+import "InterpretacionUploadCard.dart";
 
 class ArchivosPage extends StatefulWidget {
   final Map<String, dynamic> cita;
@@ -24,6 +25,7 @@ class _ArchivosPageState extends State<ArchivosPage> {
   List<Map<String, dynamic>> _archivos = [];
   bool _cargando = true;
   int? _idHistoriaClinica;
+  int? _idPaciente;
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _ArchivosPageState extends State<ArchivosPage> {
     final idPaciente = rawIdPaciente is int
         ? rawIdPaciente
         : int.tryParse('$rawIdPaciente');
+    _idPaciente = idPaciente;
 
     if (idPaciente == null) {
       setState(() {
@@ -205,61 +208,25 @@ class _ArchivosPageState extends State<ArchivosPage> {
                   ),
                   child: _cargando
                       ? const Center(child: CircularProgressIndicator())
-                      : _archivos.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No hay archivos disponibles',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _archivos.length,
-                          itemBuilder: (context, index) {
-                            final archivo = _archivos[index];
-                            final nombreArchivo =
-                                archivo['nombreArchivo'] ??
-                                archivo['nombre'] ??
-                                'Archivo sin nombre';
-                            final tipoArchivo =
-                                archivo['tipoArchivo'] ??
-                                archivo['tipo'] ??
-                                'desconocido';
-                            final fechaArchivo =
-                                archivo['fechaCreacion'] ??
-                                archivo['fecha'] ??
-                                'Fecha desconocida';
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                leading: Icon(
-                                  tipoArchivo.contains('pdf')
-                                      ? Icons.picture_as_pdf
-                                      : _esImagen(archivo)
-                                      ? Icons.image
-                                      : Icons.insert_drive_file,
-                                  color: tipoArchivo.contains('pdf')
-                                      ? Colors.red
-                                      : _esImagen(archivo)
-                                      ? Colors.blue
-                                      : Colors.grey,
+                      : Column(
+                          children: [
+                            if (_idHistoriaClinica != null)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  0,
                                 ),
-                                title: Text(nombreArchivo),
-                                subtitle: Text(fechaArchivo),
-                                onTap: () => _visualizarArchivo(archivo),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                  ),
-                                  tooltip: 'Eliminar',
-                                  onPressed: () =>
-                                      _eliminarArchivoLocal(archivo),
+                                child: InterpretacionUploadCard(
+                                  idHistoriaClinica: _idHistoriaClinica,
+                                  idPaciente: _idPaciente,
+                                  onSaved: _cargarArchivos,
                                 ),
                               ),
-                            );
-                          },
+                            const SizedBox(height: 16),
+                            Expanded(child: _buildListadoArchivos()),
+                          ],
                         ),
                 ),
               ),
@@ -267,6 +234,59 @@ class _ArchivosPageState extends State<ArchivosPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildListadoArchivos() {
+    if (_archivos.isEmpty) {
+      return const Center(
+        child: Text(
+          'No hay archivos disponibles',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _archivos.length,
+      itemBuilder: (context, index) {
+        final archivo = _archivos[index];
+        final nombreArchivo =
+            archivo['nombreArchivo'] ??
+            archivo['nombre'] ??
+            'Archivo sin nombre';
+        final tipoArchivo =
+            archivo['tipoArchivo'] ?? archivo['tipo'] ?? 'desconocido';
+        final fechaArchivo =
+            archivo['fechaCreacion'] ?? archivo['fecha'] ?? 'Fecha desconocida';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: Icon(
+              tipoArchivo.contains('pdf')
+                  ? Icons.picture_as_pdf
+                  : _esImagen(archivo)
+                  ? Icons.image
+                  : Icons.insert_drive_file,
+              color: tipoArchivo.contains('pdf')
+                  ? Colors.red
+                  : _esImagen(archivo)
+                  ? Colors.blue
+                  : Colors.grey,
+            ),
+            title: Text(nombreArchivo),
+            subtitle: Text(fechaArchivo),
+            onTap: () => _visualizarArchivo(archivo),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Eliminar',
+              onPressed: () => _eliminarArchivoLocal(archivo),
+            ),
+          ),
+        );
+      },
     );
   }
 }
